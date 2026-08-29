@@ -11,11 +11,13 @@ st.caption("Auto-Scan ERP Screenshot | Compliance Optimizer")
 
 # Sidebar Configuration
 st.sidebar.header("⚙️ University Policy")
-min_req = st.sidebar.slider("Minimum Required Attendance (%)", 50, 90, 75, step=5)
+min_req = st.sidebar.slider("Minimum Required Attendance (%)", 50, 95, 80, step=5)
 target_ratio = min_req / 100
 
 st.sidebar.markdown("---")
-st.sidebar.info("💡 **Rule:** 80% minimum aggregate attendance is required for end-term examination eligibility.")
+st.sidebar.info(
+    f"💡 **Rule:** {min_req}% minimum aggregate attendance is required for end-term examination eligibility."
+)
 
 # -----------------------------------------------------------------------------
 # DEFAULT FALLBACK DATA
