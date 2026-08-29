@@ -2,9 +2,9 @@ import math
 import pandas as pd
 import streamlit as st
 
-st.set_page_config(page_title="College Attendance & Bunk Planner", page_icon="🎓", layout="wide")
+st.set_page_config(page_title="MIT WPU Attendance & Bunk Planner", page_icon="🎓", layout="wide")
 
-st.title("🎓 College Attendance & Bunk Optimizer")
+st.title("🎓 MIT WPU Attendance & Bunk Optimizer")
 st.caption("Universal Attendance Margin & Compliance Calculator")
 
 # Sidebar Configuration
