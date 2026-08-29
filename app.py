@@ -159,7 +159,7 @@ else:
 st.markdown("---")
 st.markdown(
     "<div style='text-align: center; color: gray;'>"
-    "Built by <b>🧑🏽‍🎓Vedant Khilare🧑🏽‍🎓</b> | School of Mathematics & Statistics"
-    "</div>",
+    "Built by <b>🧑🏽‍🎓Vedant Khilare🧑🏽‍🎓</b>(layout="wide") | School of Mathematics & Statistics"
+    "</div>", (layout="wide") 
     unsafe_allow_html=True,
 )
