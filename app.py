@@ -31,8 +31,8 @@ if "attendance_df" not in st.session_state:
             "Discrete Mathematics"
         ],
         "Type": ["PR", "TH", "TH", "PR", "TH", "TH"],
-        "Present": [1, 14, 14, 12, 10, 7],
-        "Total Period": [4, 15, 15, 16, 11, 9]
+        "Present": [00, 00, 00, 00, 00, 00],
+        "Total Period": [00, 00, 00, 00, 00, 00]
     })
 
 # -----------------------------------------------------------------------------
