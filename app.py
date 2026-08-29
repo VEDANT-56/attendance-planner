@@ -157,9 +157,9 @@ else:
 
 # Add a footer at the bottom of the script:
 st.markdown("---")
-st.markdown(
+st.markdown( 
     "<div style='text-align: center; color: gray;'>"
     "Built by <b>🧑🏽‍🎓Vedant Khilare🧑🏽‍🎓</b> | School of Mathematics & Statistics"
-    "</div>",
-    unsafe_allow_html=True, layout="wide"
+    "</div>", layout="wide"
+    unsafe_allow_html=True,
     )
