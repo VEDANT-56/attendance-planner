@@ -20,20 +20,16 @@ st.sidebar.info("💡 **Rule:** 75% minimum aggregate attendance is required for
 # -----------------------------------------------------------------------------
 # DEFAULT FALLBACK DATA
 # -----------------------------------------------------------------------------
-if "attendance_df" not in st.session_state:
-    st.session_state.attendance_df = pd.DataFrame({
-        "Subject": [
-            "Yoga - I",
-            "Descriptive Statistics-I",
-            "Introduction to Probability Theory",
-            "R Programming",
-            "Calculus",
-            "Discrete Mathematics"
-        ],
-        "Type": ["PR", "TH", "TH", "PR", "TH", "TH"],
-        "Present": [1, 14, 14, 12, 10, 7],
-        "Total Period": [4, 15, 15, 16, 11, 9]
-    })
+default_data = {
+    "Subject": ["Course 1", "Course 2", "Course 3", "Course 4"],
+    "Type": ["TH", "TH", "PR", "TH"],
+    "Present": [0, 0, 0, 0],
+    "Total Period": [1, 1, 1, 1],
+}
+
+edited_df = st.data_editor(
+    pd.DataFrame(default_data), num_rows="dynamic", use_container_width=True
+)
 
 # -----------------------------------------------------------------------------
 # SCREENSHOT UPLOADER & OCR PARSER
