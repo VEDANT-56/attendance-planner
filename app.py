@@ -15,7 +15,7 @@ min_req = st.sidebar.slider("Minimum Required Attendance (%)", 50, 90, 75, step=
 target_ratio = min_req / 100
 
 st.sidebar.markdown("---")
-st.sidebar.info("💡 **Rule:** 75% minimum aggregate attendance is required for end-term examination eligibility.")
+st.sidebar.info("💡 **Rule:** 80% minimum aggregate attendance is required for end-term examination eligibility.")
 
 # -----------------------------------------------------------------------------
 # DEFAULT FALLBACK DATA
