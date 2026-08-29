@@ -24,8 +24,8 @@ st.sidebar.info(f"💡 Target is currently set to **{min_req}%**.")
 default_data = {
     "Subject": ["Course 1", "Course 2", "Course 3", "Course 4"],
     "Type": ["TH", "TH", "PR", "TH"],
-    "Present": [15, 14, 12, 10],
-    "Total Period": [15, 15, 16, 11]
+    "Present": [00, 00, 00, 00],
+    "Total Period": [00, 00, 00, 00]
 }
 
 if "attendance_df" not in st.session_state:
