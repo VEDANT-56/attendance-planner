@@ -1,65 +1,72 @@
-import io
 import math
 import numpy as np
 import pandas as pd
 from PIL import Image
 import streamlit as st
 
-st.set_page_config(page_title="College Attendance & Bunk Planner", page_icon="🎓", layout="wide")
+st.set_page_config(page_title="MIT-WPU Attendance & Bunk Planner", page_icon="🎓", layout="wide")
 
-st.title("🎓 College Attendance & Bunk Optimizer")
-st.caption("Auto-Scan ERP Screenshot | Compliance Calculator")
+st.title("🎓 MIT-WPU Academic Attendance & Bunk Planner")
+st.caption("Auto-Scan ERP Screenshot | Compliance Optimizer")
 
 # Sidebar Configuration
 st.sidebar.header("⚙️ University Policy")
-min_req = st.sidebar.slider("Minimum Required Attendance (%)", 50, 95, 80, step=5)
+min_req = st.sidebar.slider("Minimum Required Attendance (%)", 50, 90, 75, step=5)
 target_ratio = min_req / 100
 
 st.sidebar.markdown("---")
-st.sidebar.info(f"💡 Target is currently set to **{min_req}%**.")
+st.sidebar.info("💡 **Rule:** 75% minimum aggregate attendance is required for end-term examination eligibility.")
 
 # -----------------------------------------------------------------------------
-# SESSION STATE INITIALIZATION (Prevents AttributeError)
+# DEFAULT FALLBACK DATA
 # -----------------------------------------------------------------------------
-default_data = {
-    "Subject": ["Course 1", "Course 2", "Course 3", "Course 4"],
-    "Type": ["TH", "TH", "PR", "TH"],
-    "Present": [00, 00, 00, 00],
-    "Total Period": [00, 00, 00, 00]
-}
-
 if "attendance_df" not in st.session_state:
-    st.session_state.attendance_df = pd.DataFrame(default_data)
+    st.session_state.attendance_df = pd.DataFrame({
+        "Subject": [
+            "Yoga - I",
+            "Descriptive Statistics-I",
+            "Introduction to Probability Theory",
+            "R Programming",
+            "Calculus",
+            "Discrete Mathematics"
+        ],
+        "Type": ["PR", "TH", "TH", "PR", "TH", "TH"],
+        "Present": [1, 14, 14, 12, 10, 7],
+        "Total Period": [4, 15, 15, 16, 11, 9]
+    })
 
 # -----------------------------------------------------------------------------
-# SCREENSHOT UPLOADER & OCR SCANNER
+# SCREENSHOT UPLOADER & OCR PARSER
 # -----------------------------------------------------------------------------
-st.subheader("📸 Option 1: Upload ERP Attendance Screenshot")
-uploaded_file = st.file_uploader("Upload your portal screenshot (PNG / JPG / JPEG)", type=["png", "jpg", "jpeg"])
+st.subheader("📸 Upload ERP Attendance Screenshot")
+uploaded_file = st.file_uploader("Upload your portal screenshot (PNG/JPG)", type=["png", "jpg", "jpeg"])
 
-if uploaded_file is not None:
+if uploaded_file:
     img = Image.open(uploaded_file)
+    # Fixed argument: use_container_width instead of use_column_width
     st.image(img, caption="Uploaded Portal Screenshot", use_container_width=True)
 
     if st.button("🔍 Scan & Extract Attendance"):
-        with st.spinner("Analyzing image and extracting numbers... (takes ~10 seconds)"):
+        with st.spinner("Processing image with OCR..."):
             try:
                 import easyocr
                 reader = easyocr.Reader(['en'], gpu=False)
                 ocr_results = reader.readtext(np.array(img))
+                
+                # Extract clean lines of text
                 detected_lines = [item[1].strip() for item in ocr_results if item[1].strip()]
                 
-                st.success("Screenshot scanned! Review the table below or adjust values manually.")
+                st.success("Screenshot scanned successfully! Review the detected values below.")
             except Exception as e:
-                st.error(f"OCR processing note: {e}. You can directly edit the table below.")
-
-st.divider()
+                st.error(f"OCR Reader encountered an issue: {e}")
+                st.info("You can still manually tweak or verify your numbers in the table below.")
 
 # -----------------------------------------------------------------------------
 # INTERACTIVE DATA TABLE
 # -----------------------------------------------------------------------------
-st.subheader("📋 Option 2: Verify, Edit, or Paste Attendance Table")
-st.caption("💡 **Tip:** You can also click the top-left cell below and press **Ctrl + V** to paste copied rows from your portal.")
+st.write("")
+st.subheader("📋 Verify & Edit Attendance Data")
+st.caption("Double-click any cell to edit or add missing subjects:")
 
 edited_df = st.data_editor(
     st.session_state.attendance_df,
@@ -88,12 +95,11 @@ for _, row in edited_df.iterrows():
     if pct >= min_req:
         safe_bunks = math.floor((attended - (target_ratio * total)) / target_ratio)
         if safe_bunks > 0:
-            status = f"✅ Safe (Can skip {safe_bunks} lecture{'s' if safe_bunks != 1 else ''})"
+            status = f"✅ Safe (Can skip {safe_bunks} more)"
         else:
             status = "⚠️ Borderline (Do not miss next class)"
     else:
-        diff = ((target_ratio * total) - attended) / (1 - target_ratio)
-        recovery_needed = math.ceil(round(diff, 5))
+        recovery_needed = math.ceil(((target_ratio * total) - attended) / (1 - target_ratio))
         status = f"🚨 Deficit (Must attend next {recovery_needed} consecutive)"
 
     results.append({
@@ -121,14 +127,14 @@ st.subheader("📈 Summary Breakdown")
 theory_df = edited_df[edited_df["Type"] == "TH"]
 practical_df = edited_df[edited_df["Type"] == "PR"]
 
-th_pres = int(pd.to_numeric(theory_df["Present"], errors="coerce").fillna(0).sum()) if not theory_df.empty else 0
-th_tot = int(pd.to_numeric(theory_df["Total Period"], errors="coerce").fillna(1).sum()) if not theory_df.empty else 0
+th_pres = int(theory_df["Present"].sum()) if not theory_df.empty else 0
+th_tot = int(theory_df["Total Period"].sum()) if not theory_df.empty else 0
 
-pr_pres = int(pd.to_numeric(practical_df["Present"], errors="coerce").fillna(0).sum()) if not practical_df.empty else 0
-pr_tot = int(pd.to_numeric(practical_df["Total Period"], errors="coerce").fillna(1).sum()) if not practical_df.empty else 0
+pr_pres = int(practical_df["Present"].sum()) if not practical_df.empty else 0
+pr_tot = int(practical_df["Total Period"].sum()) if not practical_df.empty else 0
 
-tot_pres = int(pd.to_numeric(edited_df["Present"], errors="coerce").fillna(0).sum())
-tot_tot = int(pd.to_numeric(edited_df["Total Period"], errors="coerce").fillna(1).sum())
+tot_pres = int(edited_df["Present"].sum())
+tot_tot = int(edited_df["Total Period"].sum())
 
 th_pct = (th_pres / th_tot) * 100 if th_tot > 0 else 0
 pr_pct = (pr_pres / pr_tot) * 100 if pr_tot > 0 else 0
@@ -143,3 +149,17 @@ if tot_pct >= min_req:
     st.success(f"🎉 **Overall Safe:** Cumulative attendance is **{tot_pct:.2f}%**, above the {min_req}% cutoff.")
 else:
     st.error(f"🚨 **Attention Required:** Cumulative attendance is **{tot_pct:.2f}%**, below the mandatory {min_req}% cutoff.")
+    st.set_page_config(
+    page_title="Attendance Planner | by Vedant Khilare",
+    page_icon="🎓",
+    layout="wide",
+)
+
+# Add a footer at the bottom of the script:
+st.markdown("---")
+st.markdown(
+    "<div style='text-align: center; color: gray;'>"
+    "Built by <b>Vedant Khilare</b> | School of Mathematics & Statistics"
+    "</div>",
+    unsafe_allow_html=True,
+)
