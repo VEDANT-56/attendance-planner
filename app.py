@@ -1,71 +1,34 @@
 import math
-import numpy as np
 import pandas as pd
-from PIL import Image
 import streamlit as st
 
-st.set_page_config(page_title="MIT-WPU Attendance & Bunk Planner", page_icon="🎓", layout="wide")
+st.set_page_config(page_title="College Attendance & Bunk Planner", page_icon="🎓", layout="wide")
 
-st.title("🎓 MIT-WPU Academic Attendance & Bunk Planner")
-st.caption("Auto-Scan ERP Screenshot | Compliance Optimizer")
+st.title("🎓 College Attendance & Bunk Optimizer")
+st.caption("Universal Attendance Margin & Compliance Calculator")
 
 # Sidebar Configuration
 st.sidebar.header("⚙️ University Policy")
-min_req = st.sidebar.slider("Minimum Required Attendance (%)", 50, 90, 75, step=5)
+min_req = st.sidebar.slider("Minimum Required Attendance (%)", 50, 95, 80, step=5)
 target_ratio = min_req / 100
 
 st.sidebar.markdown("---")
-st.sidebar.info("💡 **Rule:** 75% minimum aggregate attendance is required for end-term examination eligibility.")
+st.sidebar.info(f"💡 Target is currently set to **{min_req}%**.")
 
-# -----------------------------------------------------------------------------
-# DEFAULT FALLBACK DATA
-# -----------------------------------------------------------------------------
-default_data = {
+# Default placeholder data (generic template)
+default_df = pd.DataFrame({
     "Subject": ["Course 1", "Course 2", "Course 3", "Course 4"],
     "Type": ["TH", "TH", "PR", "TH"],
-    "Present": [0, 0, 0, 0],
-    "Total Period": [1, 1, 1, 1],
-}
+    "Present": [15, 14, 12, 10],
+    "Total Period": [15, 15, 16, 11]
+})
 
+st.subheader("📋 Enter or Paste Your Attendance")
+st.caption("💡 **Tip:** Click any cell to edit, or select the whole table from your ERP and paste it here.")
+
+# Directly edit the DataFrame without session_state dependency
 edited_df = st.data_editor(
-    pd.DataFrame(default_data), num_rows="dynamic", use_container_width=True
-)
-
-# -----------------------------------------------------------------------------
-# SCREENSHOT UPLOADER & OCR PARSER
-# -----------------------------------------------------------------------------
-st.subheader("📸 Upload ERP Attendance Screenshot")
-uploaded_file = st.file_uploader("Upload your portal screenshot (PNG/JPG)", type=["png", "jpg", "jpeg"])
-
-if uploaded_file:
-    img = Image.open(uploaded_file)
-    # Fixed argument: use_container_width instead of use_column_width
-    st.image(img, caption="Uploaded Portal Screenshot", use_container_width=True)
-
-    if st.button("🔍 Scan & Extract Attendance"):
-        with st.spinner("Processing image with OCR..."):
-            try:
-                import easyocr
-                reader = easyocr.Reader(['en'], gpu=False)
-                ocr_results = reader.readtext(np.array(img))
-                
-                # Extract clean lines of text
-                detected_lines = [item[1].strip() for item in ocr_results if item[1].strip()]
-                
-                st.success("Screenshot scanned successfully! Review the detected values below.")
-            except Exception as e:
-                st.error(f"OCR Reader encountered an issue: {e}")
-                st.info("You can still manually tweak or verify your numbers in the table below.")
-
-# -----------------------------------------------------------------------------
-# INTERACTIVE DATA TABLE
-# -----------------------------------------------------------------------------
-st.write("")
-st.subheader("📋 Verify & Edit Attendance Data")
-st.caption("Double-click any cell to edit or add missing subjects:")
-
-edited_df = st.data_editor(
-    st.session_state.attendance_df,
+    default_df,
     num_rows="dynamic",
     use_container_width=True
 )
@@ -91,11 +54,13 @@ for _, row in edited_df.iterrows():
     if pct >= min_req:
         safe_bunks = math.floor((attended - (target_ratio * total)) / target_ratio)
         if safe_bunks > 0:
-            status = f"✅ Safe (Can skip {safe_bunks} more)"
+            status = f"✅ Safe (Can skip {safe_bunks} lecture{'s' if safe_bunks != 1 else ''})"
         else:
             status = "⚠️ Borderline (Do not miss next class)"
     else:
-        recovery_needed = math.ceil(((target_ratio * total) - attended) / (1 - target_ratio))
+        # Avoid floating-point arithmetic glitches
+        diff = ((target_ratio * total) - attended) / (1 - target_ratio)
+        recovery_needed = math.ceil(round(diff, 5))
         status = f"🚨 Deficit (Must attend next {recovery_needed} consecutive)"
 
     results.append({
@@ -112,25 +77,26 @@ results_df = pd.DataFrame(results)
 st.divider()
 
 # -----------------------------------------------------------------------------
-# RESULTS & METRICS BREAKDOWN
+# RESULTS DISPLAY
 # -----------------------------------------------------------------------------
 st.subheader("📊 Subject-Wise Eligibility & Bunk Allowance")
 st.dataframe(results_df, use_container_width=True)
 
+# Breakdowns
 st.divider()
 st.subheader("📈 Summary Breakdown")
 
 theory_df = edited_df[edited_df["Type"] == "TH"]
 practical_df = edited_df[edited_df["Type"] == "PR"]
 
-th_pres = int(theory_df["Present"].sum()) if not theory_df.empty else 0
-th_tot = int(theory_df["Total Period"].sum()) if not theory_df.empty else 0
+th_pres = int(pd.to_numeric(theory_df["Present"], errors="coerce").fillna(0).sum()) if not theory_df.empty else 0
+th_tot = int(pd.to_numeric(theory_df["Total Period"], errors="coerce").fillna(1).sum()) if not theory_df.empty else 0
 
-pr_pres = int(practical_df["Present"].sum()) if not practical_df.empty else 0
-pr_tot = int(practical_df["Total Period"].sum()) if not practical_df.empty else 0
+pr_pres = int(pd.to_numeric(practical_df["Present"], errors="coerce").fillna(0).sum()) if not practical_df.empty else 0
+pr_tot = int(pd.to_numeric(practical_df["Total Period"], errors="coerce").fillna(1).sum()) if not practical_df.empty else 0
 
-tot_pres = int(edited_df["Present"].sum())
-tot_tot = int(edited_df["Total Period"].sum())
+tot_pres = int(pd.to_numeric(edited_df["Present"], errors="coerce").fillna(0).sum())
+tot_tot = int(pd.to_numeric(edited_df["Total Period"], errors="coerce").fillna(1).sum())
 
 th_pct = (th_pres / th_tot) * 100 if th_tot > 0 else 0
 pr_pct = (pr_pres / pr_tot) * 100 if pr_tot > 0 else 0
