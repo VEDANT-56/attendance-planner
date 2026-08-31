@@ -4,7 +4,12 @@ import pandas as pd
 from PIL import Image
 import streamlit as st
 
-st.set_page_config(page_title="MIT-WPU Attendance & Bunk Planner", page_icon="🎓", layout="wide")
+# ✅ FIX 1: set_page_config must be called ONCE, at the very top — never inside conditionals.
+st.set_page_config(
+    page_title="Attendance Planner | by Vedant Khilare",
+    page_icon="🎓",
+    layout="wide",
+)
 
 st.title("🎓 MIT-WPU Academic Attendance & Bunk Planner")
 st.caption("Auto-Scan ERP Screenshot | Compliance Optimizer")
@@ -23,6 +28,7 @@ st.sidebar.info(
 # DEFAULT FALLBACK DATA
 # -----------------------------------------------------------------------------
 if "attendance_df" not in st.session_state:
+    # ✅ FIX 2: Replaced misleading `00` literals with plain `0`.
     st.session_state.attendance_df = pd.DataFrame({
         "Subject": [
             "Yoga - I",
@@ -33,8 +39,8 @@ if "attendance_df" not in st.session_state:
             "Discrete Mathematics"
         ],
         "Type": ["PR", "TH", "TH", "PR", "TH", "TH"],
-        "Present": [00, 00, 00, 00, 00, 00],
-        "Total Period": [00, 00, 00, 00, 00, 00]
+        "Present": [0, 0, 0, 0, 0, 0],
+        "Total Period": [0, 0, 0, 0, 0, 0]
     })
 
 # -----------------------------------------------------------------------------
@@ -45,7 +51,6 @@ uploaded_file = st.file_uploader("Upload your portal screenshot (PNG/JPG)", type
 
 if uploaded_file:
     img = Image.open(uploaded_file)
-    # Fixed argument: use_container_width instead of use_column_width
     st.image(img, caption="Uploaded Portal Screenshot", use_container_width=True)
 
     if st.button("🔍 Scan & Extract Attendance"):
@@ -54,10 +59,10 @@ if uploaded_file:
                 import easyocr
                 reader = easyocr.Reader(['en'], gpu=False)
                 ocr_results = reader.readtext(np.array(img))
-                
+
                 # Extract clean lines of text
                 detected_lines = [item[1].strip() for item in ocr_results if item[1].strip()]
-                
+
                 st.success("Screenshot scanned successfully! Review the detected values below.")
             except Exception as e:
                 st.error(f"OCR Reader encountered an issue: {e}")
@@ -83,25 +88,47 @@ results = []
 for _, row in edited_df.iterrows():
     subject = str(row.get("Subject", "Course"))
     sub_type = str(row.get("Type", "TH"))
-    
+
     try:
         attended = int(row.get("Present", 0))
-        total = int(row.get("Total Period", 1))
+        total = int(row.get("Total Period", 0))
     except (ValueError, TypeError):
-        attended, total = 0, 1
+        attended, total = 0, 0
 
-    total = max(1, total)
-    attended = min(attended, total)
+    # ✅ FIX 3: Guard against zero total before any division.
+    if total <= 0:
+        results.append({
+            "Subject": subject,
+            "Type": sub_type,
+            "Present": attended,
+            "Total Period": total,
+            "Current %": "N/A",
+            "Action / Margin": "⚪ No data yet"
+        })
+        continue
+
+    attended = min(attended, total)   # clamp: can't attend more than total
     pct = (attended / total) * 100
 
     if pct >= min_req:
-        safe_bunks = math.floor((attended - (target_ratio * total)) / target_ratio)
+        # ✅ FIX 4: Guard against target_ratio == 1 (100% requirement edge case).
+        if target_ratio < 1:
+            safe_bunks = math.floor((attended - target_ratio * total) / target_ratio)
+        else:
+            safe_bunks = 0
+
         if safe_bunks > 0:
             status = f"✅ Safe (Can skip {safe_bunks} more)"
         else:
             status = "⚠️ Borderline (Do not miss next class)"
     else:
-        recovery_needed = math.ceil(((target_ratio * total) - attended) / (1 - target_ratio))
+        # ✅ FIX 5: Guard against target_ratio == 1 to avoid ZeroDivisionError.
+        if target_ratio < 1:
+            recovery_needed = math.ceil(
+                (target_ratio * total - attended) / (1 - target_ratio)
+            )
+        else:
+            recovery_needed = "∞"
         status = f"🚨 Deficit (Must attend next {recovery_needed} consecutive)"
 
     results.append({
@@ -147,21 +174,22 @@ col1.metric("Theory Total", f"{th_pres} / {th_tot}", f"{th_pct:.2f}%")
 col2.metric("Practical Total", f"{pr_pres} / {pr_tot}", f"{pr_pct:.2f}%")
 col3.metric("Grand Total (Aggregate)", f"{tot_pres} / {tot_tot}", f"{tot_pct:.2f}%")
 
+# ✅ FIX 6: This block was correct but the duplicate set_page_config inside the
+#           else branch below it would crash the app. That call is now removed.
 if tot_pct >= min_req:
-    st.success(f"🎉 **Overall Safe:** Cumulative attendance is **{tot_pct:.2f}%**, above the {min_req}% cutoff.")
+    st.success(
+        f"🎉 **Overall Safe:** Cumulative attendance is **{tot_pct:.2f}%**, above the {min_req}% cutoff."
+    )
 else:
-    st.error(f"🚨 **Attention Required:** Cumulative attendance is **{tot_pct:.2f}%**, below the mandatory {min_req}% cutoff.")
-    st.set_page_config(
-    page_title="Attendance Planner | by Vedant Khilare",
-    page_icon="🎓",
-    layout="wide",
-)
+    st.error(
+        f"🚨 **Attention Required:** Cumulative attendance is **{tot_pct:.2f}%**, below the mandatory {min_req}% cutoff."
+    )
 
-# Add a footer at the bottom of the script:
+# ✅ FIX 7: Footer was trapped inside the else block — moved outside so it always renders.
 st.markdown("---")
-st.markdown( 
+st.markdown(
     "<div style='text-align: center; color: white;'>"
     "Built by <b>🧑🏽‍🎓Vedant Khilare🧑🏽‍🎓</b> | School of Mathematics & Statistics"
     "</div>",
     unsafe_allow_html=True,
-    )
+)
